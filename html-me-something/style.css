@@ -1,0 +1,35 @@
+body {
+  background-color: #ffff4d;
+  width: 100%;
+}
+header,
+main,
+footer {
+  padding: .625em;
+}
+header,
+footer {
+  text-align: center;
+}
+h1, h2 {
+  font-family: 'Baloo Bhaina', cursive;
+}
+p, figcaption {
+  font-family: 'Lato', sans-serif;
+}
+h2 {
+  font-size:1.5em;
+}
+p {
+  font-size: 1em;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+footer p {
+  display: inline-block;
+  margin-left: 10em;
+  margin-right: 10em;
+  font-size: .9em;
+}
