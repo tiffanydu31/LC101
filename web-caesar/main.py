@@ -57,7 +57,7 @@ class MainHandler(webapp2.RequestHandler):
         message = self.request.get("message")
         encrypted = caesar.encrypt(message, rotation)
         escaped = cgi.escape(encrypted)
-        self.response.write(build_page(encrypted))
+        self.response.write(build_page(escaped))
 
 app = webapp2.WSGIApplication([
     ('/', MainHandler),
