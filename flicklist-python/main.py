@@ -1,4 +1,5 @@
 import webapp2
+import cgi
 
 # html boilerplate for the top of every page
 page_header = """
@@ -6,9 +7,16 @@ page_header = """
 <html>
 <head>
     <title>FlickList</title>
+    <style type="text/css">
+        .error {
+            color: red;
+        }
+    </style>
 </head>
 <body>
-    <h1>FlickList</h1>
+    <h1>
+        <a href="/">FlickList</a>
+    </h1>
 """
 
 # html boilerplate for the bottom of every page
@@ -16,6 +24,23 @@ page_footer = """
 </body>
 </html>
 """
+
+
+# a list of movies that nobody should be allowed to watch
+terrible_movies = [
+    "Gigli",
+    "Star Wars Episode 1: Attack of the Clones",
+    "Paul Blart: Mall Cop 2",
+    "Nine Lives"
+]
+
+
+def getCurrentWatchlist():
+    """ Returns the user's current watchlist """
+
+    # for now, we are just pretending
+    return [ "Star Wars", "Minions", "Freaky Friday", "My Favorite Martian" ]
+
 
 class Index(webapp2.RequestHandler):
     """ Handles requests coming in to '/' (the root of our site)
@@ -38,31 +63,36 @@ class Index(webapp2.RequestHandler):
         </form>
         """
 
-        # TODO 1
-        # Include another form so the user can "cross off" a movie from their list.
-        cross_off_form = """
-            <form action="/cross-off" method="post">
-                <label>
-                    I want to cross off
-                    <select name="watched-movie">
-                        <option value="The Notebook">The Notebook</option>
-                        <option value="The Last Song">The Last Song</option>
-                        <option value="Princess Diana">Princess Diana</option>
-                        <option value="Ella Enchanted">Ella Enchanted</option>
-                    </select>
-                    from my watchlist.
-                </label>
-                <input type="submit" value="Cross off"/>
-            </form>
-        """
+        # a form for crossing off movies
+        # (first we build a dropdown from the current watchlist items)
+        crossoff_options = ""
+        for movie in getCurrentWatchlist():
+            crossoff_options += '<option value="{0}">{0}</option>'.format(movie)
 
-        # TODO 4 (Extra Credit)
-        # modify your form to use a dropdown (<select>) instead a
-        # text box (<input type="text"/>)
+        crossoff_form = """
+        <form action="/cross-off" method="post">
+            <label>
+                I want to cross off
+                <select name="crossed-off-movie"/>
+                    {0}
+                </select>
+                from my watchlist.
+            </label>
+            <input type="submit" value="Cross It Off"/>
+        </form>
+        """.format(crossoff_options)
 
+        # if we have an error, make a <p> to display it
+        error = self.request.get("error")
+        if error:
+            error_esc = cgi.escape(error, quote=True)
+            error_element = '<p class="error">' + error_esc + '</p>'
+        else:
+            error_element = ''
 
-
-        content = page_header + edit_header + add_form  + cross_off_form + page_footer
+        # combine all the pieces to build the content of our response
+        main_content = edit_header + add_form + crossoff_form + error_element
+        content = page_header + main_content + page_footer
         self.response.write(content)
 
 
@@ -75,18 +105,23 @@ class AddMovie(webapp2.RequestHandler):
         # look inside the request to figure out what the user typed
         new_movie = self.request.get("new-movie")
 
+        # TODO 2
+        # if the user typed nothing at all, redirect and yell at them
+
+
+        # TODO 3
+        # if the user wants to add a terrible movie, redirect and yell at them
+
+
+        # TODO 1
+        # 'escape' the user's input so that if they typed HTML, it doesn't mess up our site
+
         # build response content
         new_movie_element = "<strong>" + new_movie + "</strong>"
         sentence = new_movie_element + " has been added to your Watchlist!"
-
         content = page_header + "<p>" + sentence + "</p>" + page_footer
         self.response.write(content)
 
-
-# TODO 2
-# Create a new RequestHandler class called CrossOffMovie, to receive and
-# handle the request from your 'cross-off' form. The user should see a message like:
-# "Star Wars has been crossed off your watchlist".
 
 class CrossOffMovie(webapp2.RequestHandler):
     """ Handles requests coming in to '/cross-off'
@@ -95,17 +130,25 @@ class CrossOffMovie(webapp2.RequestHandler):
 
     def post(self):
         # look inside the request to figure out what the user typed
-        watched_movie = self.request.get("watched-movie")
+        crossed_off_movie = self.request.get("crossed-off-movie")
 
-        # build response content
-        old_movie_element = "<strike>" + watched_movie + "</strike>"
-        sentence = old_movie_element + " has been crossed off your Watchlist."
+        if (crossed_off_movie in getCurrentWatchlist()) == False:
+            # the user tried to cross off a movie that isn't in their list,
+            # so we redirect back to the front page and yell at them
 
-        content = page_header + "<p>" + sentence + "</p>" + page_footer
+            # make a helpful error message
+            error = "'{0}' is not in your Watchlist, so you can't cross it off!".format(crossed_off_movie)
+
+            # redirect to homepage, and include error as a query parameter in the URL
+            self.redirect("/?error=" + error)
+
+        # if we didn't redirect by now, then all is well
+        crossed_off_movie_element = "<strike>" + crossed_off_movie + "</strike>"
+        confirmation = crossed_off_movie_element + " has been crossed off your Watchlist."
+        content = page_header + "<p>" + confirmation + "</p>" + page_footer
         self.response.write(content)
 
-# TODO 3
-# Include a route for your cross-off handler, by adding another tuple to the list below.
+
 app = webapp2.WSGIApplication([
     ('/', Index),
     ('/add', AddMovie),
