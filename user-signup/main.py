@@ -43,12 +43,12 @@ def buildPage(usernameError='', passwordError='', verificationError='', emailErr
                 </tr>
                 <tr>
                     <td><label>Password</label></td>
-                    <td><input type='text' name='password'></td>
+                    <td><input type='password' name='password'></td>
                     <td style='color:red'>%(passwordError)s</td>
                 </tr>
                 <tr>
                     <td><label>Verify Password</label></td>
-                    <td><input type='text' name='verify'></td>
+                    <td><input type='password' name='verify'></td>
                     <td style='color:red'>%(verificationError)s</td>
                 </tr>
                 <tr>
