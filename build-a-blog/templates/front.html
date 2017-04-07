@@ -1,0 +1,21 @@
+<!-- Displays the five most recent blogs
+input parameters: blogs, previousLink, previousPage, space, nextLink, nextPage -->
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>My Blogs!</h1>
+
+{% for blog in blogs %}
+    <div class="blog">
+        <a href="/blog/{{ blog.key().id() }}" class="blog-title">{{ blog.title }}</a>
+        <div class="blog-body">{{ blog.body }}</div>
+    </div>
+{% endfor %}
+<div class="navigation">
+    <a href="{{ previousLink }}" name="previous">{{ previousPage }}</a>
+    {{ space | safe }}
+    <a href="{{ nextLink }}" name="next">{{ nextPage }}</a>
+</div>
+{% endblock %}
