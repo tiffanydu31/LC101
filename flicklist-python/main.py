@@ -1,30 +1,11 @@
 import webapp2
 import cgi
+import jinja2
+import os
 
-# html boilerplate for the top of every page
-page_header = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>FlickList</title>
-    <style type="text/css">
-        .error {
-            color: red;
-        }
-    </style>
-</head>
-<body>
-    <h1>
-        <a href="/">FlickList</a>
-    </h1>
-"""
-
-# html boilerplate for the bottom of every page
-page_footer = """
-</body>
-</html>
-"""
-
+# set up jinja
+template_dir = os.path.join(os.path.dirname(__file__), "templates")
+jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir))
 
 # a list of movies that nobody should be allowed to watch
 terrible_movies = [
@@ -35,11 +16,17 @@ terrible_movies = [
 ]
 
 
-def getCurrentWatchlist():
-    """ Returns the user's current watchlist """
+def getUnwatchedMovies():
+    """ Returns the list of movies the user wants to watch (but hasnt yet) """
 
     # for now, we are just pretending
     return [ "Star Wars", "Minions", "Freaky Friday", "My Favorite Martian" ]
+
+
+def getWatchedMovies():
+    """ Returns the list of movies the user has already watched """
+
+    return [ "The Matrix", "The Dawg" ]
 
 
 class Index(webapp2.RequestHandler):
@@ -48,53 +35,10 @@ class Index(webapp2.RequestHandler):
     """
 
     def get(self):
-
-        edit_header = "<h3>Edit My Watchlist</h3>"
-
-        # a form for adding new movies
-        add_form = """
-        <form action="/add" method="post">
-            <label>
-                I want to add
-                <input type="text" name="new-movie"/>
-                to my watchlist.
-            </label>
-            <input type="submit" value="Add It"/>
-        </form>
-        """
-
-        # a form for crossing off movies
-        # (first we build a dropdown from the current watchlist items)
-        crossoff_options = ""
-        for movie in getCurrentWatchlist():
-            crossoff_options += '<option value="{0}">{0}</option>'.format(movie)
-
-        crossoff_form = """
-        <form action="/cross-off" method="post">
-            <label>
-                I want to cross off
-                <select name="crossed-off-movie"/>
-                    {0}
-                </select>
-                from my watchlist.
-            </label>
-            <input type="submit" value="Cross It Off"/>
-        </form>
-        """.format(crossoff_options)
-
-        # if we have an error, make a <p> to display it
-        error = self.request.get("error")
-        if error:
-            error_esc = cgi.escape(error, quote=True)
-            error_element = '<p class="error">' + error_esc + '</p>'
-        else:
-            error_element = ''
-
-        # combine all the pieces to build the content of our response
-        main_content = edit_header + add_form + crossoff_form + error_element
-        content = page_header + main_content + page_footer
+        t = jinja_env.get_template("frontpage.html")
+        error = cgi.escape(self.request.get("error"), quote=True)
+        content = t.render(movies=getUnwatchedMovies(), error=error)
         self.response.write(content)
-
 
 class AddMovie(webapp2.RequestHandler):
     """ Handles requests coming in to '/add'
@@ -102,58 +46,86 @@ class AddMovie(webapp2.RequestHandler):
     """
 
     def post(self):
-        # look inside the request to figure out what the user typed
         new_movie = self.request.get("new-movie")
 
-        # TODO 2
         # if the user typed nothing at all, redirect and yell at them
-        if new_movie == '':
-            self.redirect('/?error=Please enter a movie!')
-
-        # TODO 3
-        # if the user wants to add a terrible movie, redirect and yell at them
-        if new_movie in terrible_movies:
-            self.redirect('/?error=%s is a terrible movie! You cannot add it to the list.'%new_movie)
-
-        # TODO 1
-        # 'escape' the user's input so that if they typed HTML, it doesn't mess up our site
-        new_movie = cgi.escape(new_movie)
-
-        # build response content
-        new_movie_element = "<strong>" + new_movie + "</strong>"
-        sentence = new_movie_element + " has been added to your Watchlist!"
-        content = page_header + "<p>" + sentence + "</p>" + page_footer
-        self.response.write(content)
-
-
-class CrossOffMovie(webapp2.RequestHandler):
-    """ Handles requests coming in to '/cross-off'
-        e.g. www.flicklist.com/cross-off
-    """
-
-    def post(self):
-        # look inside the request to figure out what the user typed
-        crossed_off_movie = self.request.get("crossed-off-movie")
-
-        if (crossed_off_movie in getCurrentWatchlist()) == False:
-            # the user tried to cross off a movie that isn't in their list,
-            # so we redirect back to the front page and yell at them
-
-            # make a helpful error message
-            error = "'{0}' is not in your Watchlist, so you can't cross it off!".format(crossed_off_movie)
-
-            # redirect to homepage, and include error as a query parameter in the URL
+        if (not new_movie) or (new_movie.strip() == ""):
+            error = "Please specify the movie you want to add."
             self.redirect("/?error=" + error)
 
-        # if we didn't redirect by now, then all is well
-        crossed_off_movie_element = "<strike>" + crossed_off_movie + "</strike>"
-        confirmation = crossed_off_movie_element + " has been crossed off your Watchlist."
-        content = page_header + "<p>" + confirmation + "</p>" + page_footer
+        # if the user wants to add a terrible movie, redirect and yell at them
+        if new_movie in terrible_movies:
+            error = "Trust me, you don't want to add '{0}' to your Watchlist.".format(new_movie)
+            self.redirect("/?error=" + error)
+
+        # 'escape' the user's input so that if they typed HTML, it doesn't mess up our site
+        new_movie_escaped = cgi.escape(new_movie, quote=True)
+
+        # render the confirmation message
+        t = jinja_env.get_template("add-confirmation.html")
+        content = t.render(movie = new_movie_escaped)
         self.response.write(content)
+
+
+class WatchedMovie(webapp2.RequestHandler):
+    """ Handles requests coming in to '/watched-it'
+        e.g. www.flicklist.com/watched-it
+    """
+
+    def renderError(self, error_code):
+        self.error(error_code)
+        self.response.write("Oops! Something went wrong.")
+
+
+    def post(self):
+        watched_movie = self.request.get("watched-movie")
+
+        # if the movie movie is just whitespace (or nonexistant), reject.
+        # (we didn't check for this last time--only checked in the AddMovie handler--but we probably should have!)
+        if not watched_movie or watched_movie.strip() == "":
+            self.renderError(400)
+            return
+
+        # if user tried to cross off a movie that is not in their list, reject
+        if not (watched_movie in getUnwatchedMovies()):
+            self.renderError(400)
+            return
+
+        # render confirmation page
+        t = jinja_env.get_template("watched-it-confirmation.html")
+        content = t.render(movie = watched_movie)
+        self.response.write(content)
+
+
+class MovieRatings(webapp2.RequestHandler):
+
+    def get(self):
+        t = jinja_env.get_template("ratings.html")
+        content = t.render(movies = getWatchedMovies())
+        self.response.write(content)
+
+    # TODO 2
+    # implement a post method inside this class
+    # it should render the rating-confirmation.html template
+    def post(self):
+        movie = self.request.get("movie")
+        rating = self.request.get("rating")
+
+        t = jinja_env.get_template("rating-confirmation.html")
+        content = t.render(movie = movie, rating = rating)
+        self.response.write(content)
+
+
+# TODO 1
+# Make a template called rating-confirmation.html
+# It should show a confirmation message like:
+#    "You gave Lord of the Rings a rating of ****"
+
 
 
 app = webapp2.WSGIApplication([
     ('/', Index),
     ('/add', AddMovie),
-    ('/cross-off', CrossOffMovie)
+    ('/watched-it', WatchedMovie),
+    ('/ratings', MovieRatings)
 ], debug=True)

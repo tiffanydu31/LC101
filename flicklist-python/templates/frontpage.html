@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Movies I Want to Watch:</h2>
+
+<ul>
+{% for movie in movies %}
+    <li>
+        <form action="/watched-it" method="post">
+            {{ movie }}
+            <input type="hidden" name="watched-movie" value="{{ movie }}"/>
+            <input type="submit" value="I Watched it!"/>
+        </form>
+    </li>
+{% endfor %}
+</ul>
+
+<form action="/add" method="post">
+    <label>
+        I also want to watch
+        <input type="text" name="new-movie"/>
+    </label>
+    <input type="submit" value="Add it to my List"/>
+</form>
+
+
+<p class="error">{{ error if error else "" }}</p>
+{% endblock %}
